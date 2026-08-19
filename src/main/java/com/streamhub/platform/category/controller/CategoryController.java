@@ -28,9 +28,9 @@ public class CategoryController {
     @GetMapping
     @Operation(summary = "List all categories (public)")
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> list() {
-        List<CategoryResponse> categories = categoryService.findAll().stream()
-                .map(CategoryResponse::from).toList();
-        return ResponseEntity.ok(ApiResponse.ok(categories));
+        return ResponseEntity.ok(
+                ApiResponse.ok(categoryService.findAll())
+        );
     }
 
     @PostMapping
