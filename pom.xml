@@ -54,6 +54,12 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
+        <!-- Jackson Java Time support for LocalDateTime, LocalDate, Instant, etc. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
         <!-- DB / Migrations -->
         <dependency>
             <groupId>org.postgresql</groupId>
