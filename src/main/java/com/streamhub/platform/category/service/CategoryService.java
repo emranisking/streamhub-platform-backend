@@ -1,5 +1,6 @@
 package com.streamhub.platform.category.service;
 
+import com.streamhub.platform.category.dto.CategoryResponse;
 import com.streamhub.platform.category.entity.Category;
 import com.streamhub.platform.category.repository.CategoryRepository;
 import com.streamhub.platform.common.exception.BadRequestException;
@@ -19,21 +20,32 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     @Cacheable(cacheNames = "categories")
-    public List<Category> findAll() {
-        return categoryRepository.findAll();
+    public List<CategoryResponse> findAll() {
+        return categoryRepository.findAll()
+                .stream()
+                .map(CategoryResponse::from)
+                .toList();
     }
 
     public Category findById(UUID id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Category not found: " + id));
     }
 
     @CacheEvict(cacheNames = "categories", allEntries = true)
     public Category create(String name) {
         if (categoryRepository.existsByNameIgnoreCase(name)) {
-            throw new BadRequestException("A category with this name already exists");
+            throw new BadRequestException(
+                    "A category with this name already exists"
+            );
         }
-        return categoryRepository.save(Category.builder().name(name).build());
+
+        return categoryRepository.save(
+                Category.builder()
+                        .name(name)
+                        .build()
+        );
     }
 
     @CacheEvict(cacheNames = "categories", allEntries = true)
