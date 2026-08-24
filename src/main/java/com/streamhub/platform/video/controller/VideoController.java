@@ -15,18 +15,23 @@ import com.streamhub.platform.video.service.VideoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 
-/**
- * Storyline: Alice discovers and browses here before ever logging in
- * (GET /videos, GET /videos/{id}). Bob and Carol like and view here too.
- * See /docs/API_STORYLINE.md section 1.
- */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/videos")
 @RequiredArgsConstructor
@@ -38,6 +43,9 @@ public class VideoController {
     private final UserService userService;
     private final PaginationService paginationService;
     private final com.streamhub.platform.category.service.CategoryService categoryService;
+
+    @Value("${app.media.thumbnail-directory}")
+    private String thumbnailDirectory;
 
     @GetMapping
     @Operation(summary = "Paginated list of videos (public)", description = "Optional categoryId query param filters by category.")
@@ -53,6 +61,103 @@ public class VideoController {
     @Operation(summary = "Get full video details (public, Redis-cached)")
     public ResponseEntity<ApiResponse<VideoDetailResponse>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(videoService.getDetailCached(id)));
+    }
+
+    @GetMapping("/{id}/thumbnail")
+    @Operation(summary = "Get video thumbnail image")
+    public ResponseEntity<Resource> getThumbnail(@PathVariable UUID id) {
+        log.info("=========================================");
+        log.info("🚀 Thumbnail request for video: {}", id);
+
+        try {
+            Video video = videoService.getEntityById(id);
+            String thumbnailPath = video.getThumbnailUrl();
+
+            log.info("📸 thumbnailUrl from DB: '{}'", thumbnailPath);
+
+            if (thumbnailPath == null || thumbnailPath.isBlank()) {
+                log.warn("❌ No thumbnail URL for video: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
+            File thumbnailFile = null;
+
+            // TRY 1: Check if the path is a full absolute path and file exists
+            File fullPathFile = new File(thumbnailPath);
+            log.info("🔍 Checking full path: {}", fullPathFile.getAbsolutePath());
+            if (fullPathFile.exists() && fullPathFile.isFile() && fullPathFile.canRead()) {
+                thumbnailFile = fullPathFile;
+                log.info("✅ Found thumbnail using full path: {}", fullPathFile.getAbsolutePath());
+            }
+
+            // TRY 2: If not, extract filename and look in configured directory
+            if (thumbnailFile == null) {
+                String filename = thumbnailPath;
+                if (filename.contains("/")) {
+                    filename = filename.substring(filename.lastIndexOf("/") + 1);
+                }
+                if (filename.contains("\\")) {
+                    filename = filename.substring(filename.lastIndexOf("\\") + 1);
+                }
+
+                log.info("📝 Extracted filename: '{}'", filename);
+                log.info("📁 thumbnailDirectory: {}", thumbnailDirectory);
+
+                Path configuredPath = Paths.get(thumbnailDirectory).resolve(filename).normalize();
+                File configuredFile = configuredPath.toFile();
+
+                log.info("🔍 Checking configured path: {}", configuredFile.getAbsolutePath());
+                if (configuredFile.exists() && configuredFile.isFile() && configuredFile.canRead()) {
+                    thumbnailFile = configuredFile;
+                    log.info("✅ Found thumbnail in configured directory: {}", configuredFile.getAbsolutePath());
+                }
+            }
+
+            // TRY 3: Try alternative locations
+            if (thumbnailFile == null) {
+                String filename = thumbnailPath;
+                if (filename.contains("/")) {
+                    filename = filename.substring(filename.lastIndexOf("/") + 1);
+                }
+
+                String[] alternativeLocations = {
+                        "/home/emran/project/thumbnails/" + filename,
+                        "/home/emran/project/" + filename,
+                        System.getProperty("user.home") + "/project/thumbnails/" + filename,
+                        System.getProperty("user.home") + "/thumbnails/" + filename
+                };
+
+                for (String altPath : alternativeLocations) {
+                    File altFile = new File(altPath);
+                    if (altFile.exists() && altFile.isFile() && altFile.canRead()) {
+                        thumbnailFile = altFile;
+                        log.info("✅ Found thumbnail at alternative location: {}", altPath);
+                        break;
+                    }
+                }
+            }
+
+            if (thumbnailFile == null) {
+                log.warn("❌ Thumbnail file not found for video {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get content type from filename
+            String filename = thumbnailFile.getName();
+            String contentType = getContentType(filename);
+
+            Resource resource = new FileSystemResource(thumbnailFile);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(thumbnailFile.length()))
+                    .body(resource);
+
+        } catch (Exception e) {
+            log.error("❌ Error serving thumbnail for video {}", id, e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PatchMapping("/{id}/views")
@@ -141,5 +246,46 @@ public class VideoController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         videoService.delete(id);
         return ResponseEntity.ok(ApiResponse.message("Video deleted"));
+    }
+
+    // ========== Helper Methods ==========
+
+    private File findThumbnailFile(String filename) {
+        // Try multiple possible locations
+        String[] possiblePaths = {
+                "./media/thumbnails/" + filename,
+                "./media/" + filename,
+                "./thumbnails/" + filename,
+                "./uploads/thumbnails/" + filename,
+                "./uploads/" + filename,
+                "/tmp/thumbnails/" + filename,
+                System.getProperty("user.home") + "/media/thumbnails/" + filename
+        };
+
+        for (String path : possiblePaths) {
+            File file = new File(path);
+            if (file.exists() && file.canRead()) {
+                log.debug("Found thumbnail at: {}", file.getAbsolutePath());
+                return file;
+            }
+        }
+
+        return null;
+    }
+
+    private String getContentType(String filename) {
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return MediaType.IMAGE_JPEG_VALUE;
+        } else if (lower.endsWith(".png")) {
+            return MediaType.IMAGE_PNG_VALUE;
+        } else if (lower.endsWith(".webp")) {
+            return "image/webp";
+        } else if (lower.endsWith(".gif")) {
+            return MediaType.IMAGE_GIF_VALUE;
+        } else if (lower.endsWith(".svg")) {
+            return "image/svg+xml";
+        }
+        return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }
 }

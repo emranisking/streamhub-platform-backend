@@ -3,6 +3,7 @@ package com.streamhub.platform.video.repository;
 import com.streamhub.platform.video.entity.Video;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +14,11 @@ import java.util.UUID;
 
 public interface VideoRepository extends JpaRepository<Video, UUID> {
 
+    @EntityGraph(attributePaths = {"category"})
     Page<Video> findByCategoryId(UUID categoryId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category"})
+    Page<Video> findAll(Pageable pageable);
 
     Optional<Video> findBySourceFilename(String sourceFilename);
 
@@ -28,6 +33,10 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
     int incrementLikes(@Param("id") UUID id);
 
     @Modifying
-    @Query("update Video v set v.likes = case when v.likes > 0 then v.likes - 1 else 0 end where v.id = :id")
+    @Query("""
+        update Video v
+        set v.likes = case when v.likes > 0 then v.likes - 1 else 0 end
+        where v.id = :id
+        """)
     int decrementLikes(@Param("id") UUID id);
 }
