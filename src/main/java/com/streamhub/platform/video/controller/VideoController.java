@@ -44,7 +44,7 @@ public class VideoController {
     private final PaginationService paginationService;
     private final com.streamhub.platform.category.service.CategoryService categoryService;
 
-    @Value("${app.media.thumbnail-directory}")
+    @Value("${app.media.thumbnail-directory:/home/emran/project/thumbnails}")
     private String thumbnailDirectory;
 
     @GetMapping
@@ -160,6 +160,40 @@ public class VideoController {
         }
     }
 
+    // ⭐⭐⭐ NEW ENDPOINT: Get thumbnail by filename directly ⭐⭐⭐
+    // This handles requests like: GET /api/v1/videos/thumbnail/final_race_f1_the_movie_2025_thumb.jpg
+    @GetMapping("/thumbnail/{filename:.+}")
+    @Operation(summary = "Get video thumbnail by filename directly")
+    public ResponseEntity<Resource> getThumbnailByFilename(@PathVariable String filename) {
+        log.info("📸 Serving thumbnail by filename: {}", filename);
+
+        try {
+            // Clean the filename (remove any path traversal attempts)
+            String cleanFilename = filename.replaceAll("[/\\\\]", "");
+
+            // Try to find the thumbnail file
+            File thumbnailFile = findThumbnailFile(cleanFilename);
+
+            if (thumbnailFile == null || !thumbnailFile.exists() || !thumbnailFile.canRead()) {
+                log.warn("❌ Thumbnail not found: {}", cleanFilename);
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new FileSystemResource(thumbnailFile);
+            String contentType = getContentType(cleanFilename);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(thumbnailFile.length()))
+                    .body(resource);
+
+        } catch (Exception e) {
+            log.error("❌ Error serving thumbnail: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PatchMapping("/{id}/views")
     @Operation(summary = "Increment a video's view count",
             description = "Public - guests increment the raw counter; if a valid Authorization header is present, a watch-history entry is also recorded.")
@@ -250,16 +284,23 @@ public class VideoController {
 
     // ========== Helper Methods ==========
 
+    /**
+     * Find thumbnail file in multiple locations
+     */
     private File findThumbnailFile(String filename) {
-        // Try multiple possible locations
+        // Try multiple possible locations based on your configuration
         String[] possiblePaths = {
-                "./media/thumbnails/" + filename,
-                "./media/" + filename,
+                thumbnailDirectory + "/" + filename,
+                "/home/emran/project/thumbnails/" + filename,
+                "/home/emran/project/" + filename,
                 "./thumbnails/" + filename,
+                "./media/thumbnails/" + filename,
                 "./uploads/thumbnails/" + filename,
                 "./uploads/" + filename,
                 "/tmp/thumbnails/" + filename,
-                System.getProperty("user.home") + "/media/thumbnails/" + filename
+                System.getProperty("user.home") + "/media/thumbnails/" + filename,
+                System.getProperty("user.home") + "/project/thumbnails/" + filename,
+                System.getProperty("user.home") + "/thumbnails/" + filename
         };
 
         for (String path : possiblePaths) {
