@@ -2,7 +2,9 @@ package com.streamhub.platform.playback.service;
 
 import com.streamhub.platform.common.cache.RedisCacheService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -21,16 +23,18 @@ import java.util.UUID;
  * (`guest:ip:{ip}`) instead of being silently routed through the session-key
  * method as in the original implementation.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@PropertySource("classpath:application.properties")
 public class GuestTrackingService {
 
     private final RedisCacheService cacheService;
 
-    @Value("${app.playback.free-limit}")
+    @Value("${app.playback.free-limit:10}")
     private int freeLimit;
 
-    @Value("${app.playback.guest-ttl-days}")
+    @Value("${app.playback.guest-ttl-days:10}")
     private int guestTtlDays;
 
     private Duration ttl() {
