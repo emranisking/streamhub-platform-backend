@@ -18,11 +18,11 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class PlaylistItem extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "playlist_id", nullable = false)
     private Playlist playlist;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "video_id", nullable = false)
     private Video video;
 

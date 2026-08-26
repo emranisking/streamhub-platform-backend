@@ -25,7 +25,7 @@ public class Playlist extends BaseEntity {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
