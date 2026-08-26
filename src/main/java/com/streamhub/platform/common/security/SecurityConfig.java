@@ -116,6 +116,12 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // -------------------------------------------------
+                        // Media / Static resources - PUBLIC
+                        // -------------------------------------------------
+                        .requestMatchers("/media/**").permitAll()
+                        .requestMatchers("/api/v1/media/**").permitAll()
+
+                        // -------------------------------------------------
                         // Public - authentication
                         // -------------------------------------------------
                         .requestMatchers(
@@ -176,6 +182,35 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/v1/analytics/track"
                         ).permitAll()
+
+                        // -------------------------------------------------
+                        // ⭐ AUTHENTICATED ENDPOINTS - require valid JWT
+                        // -------------------------------------------------
+
+                        // History - user's watch history
+                        .requestMatchers(
+                                "/api/v1/history/**"
+                        ).authenticated()
+
+                        // Likes - user's liked videos
+                        .requestMatchers(
+                                "/api/v1/likes/**"
+                        ).authenticated()
+
+                        // Playlists - user's playlists
+                        .requestMatchers(
+                                "/api/v1/playlists/**"
+                        ).authenticated()
+
+                        // Subscriptions - user's subscription
+                        .requestMatchers(
+                                "/api/v1/subscriptions/**"
+                        ).authenticated()
+
+                        // Users - user profile
+                        .requestMatchers(
+                                "/api/v1/users/**"
+                        ).authenticated()
 
                         // -------------------------------------------------
                         // Swagger / OpenAPI
