@@ -1,0 +1,16 @@
+# Compiled class files and Maven build output
+target/
+*.class
+
+# IntelliJ IDEA files
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Logs and OS files
+*.log
+*~
+.DS_Store
+EOF
