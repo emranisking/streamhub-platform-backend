@@ -16,13 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/**
- * Application-wide security policy.
- *
- * Coarse-grained public/private routing lives here;
- * fine-grained per-endpoint rules (e.g. ADMIN-only video creation)
- * use @PreAuthorize on controller methods themselves.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -99,6 +92,12 @@ public class SecurityConfig {
                         )
                 )
 
+                .headers(headers -> headers
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=(self)")
+                        )
+                )
+
                 // -----------------------------------------------------
                 // Authorization rules
                 // -----------------------------------------------------
@@ -160,7 +159,13 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // -------------------------------------------------
-                        // Public - increment watch
+                /**
+ * Application-wide security policy.
+ *
+ * Coarse-grained public/private routing lives here;
+ * fine-grained per-endpoint rules (e.g. ADMIN-only video creation)
+ * use @PreAuthorize on controller methods themselves.
+ */        // Public - increment watch
                         // -------------------------------------------------
                         .requestMatchers(
                                 HttpMethod.POST,
