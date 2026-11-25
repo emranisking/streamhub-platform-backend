@@ -10,12 +10,6 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Single, global CORS configuration driven by `app.cors.frontend-url`.
- *
- * Every controller in the application shares this same policy.
- * There is intentionally no per-controller CORS configuration.
- */
 @Configuration
 public class CorsConfig {
 
@@ -57,16 +51,19 @@ public class CorsConfig {
         configuration.setAllowedHeaders(List.of("*"));
 
         // ---------------------------------------------------------
-        // Headers exposed to frontend JavaScript
+        // Headers exposed to frontend JavaScript.
+        // "Set-Cookie" is exposed for transparency/debugging, but
+        // the browser handles HttpOnly cookies automatically.
+        // "Authorization" is exposed for the access token header.
         // ---------------------------------------------------------
         configuration.setExposedHeaders(List.of(
-                "Authorization"
+                "Authorization",
+                "Set-Cookie"
         ));
 
         // ---------------------------------------------------------
         // Allow credentials
-        // Required if frontend sends credentials/cookies.
-        // Also compatible with Authorization headers.
+        // CRITICAL: Required for HttpOnly refresh token cookies.
         // ---------------------------------------------------------
         configuration.setAllowCredentials(true);
 
