@@ -87,8 +87,8 @@ com/streamhub/platform/user/entity/User.class
 com/streamhub/platform/subscription/service/SubscriptionService.class
 com/streamhub/platform/user/dto/LoginRequest.class
 com/streamhub/platform/video/entity/Video.class
-com/streamhub/platform/StreamhubApplication.class
 com/streamhub/platform/playlist/entity/PlaylistItem$PlaylistItemBuilderImpl.class
+com/streamhub/platform/StreamhubApplication.class
 com/streamhub/platform/playlist/service/PlaylistService.class
 com/streamhub/platform/analytics/dto/DashboardResponse.class
 com/streamhub/platform/common/config/OpenApiConfig.class
